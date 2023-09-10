@@ -86,7 +86,7 @@ def book_slots(available_slots):
         body_text = ''
         hold_slot_res = client.request("/api/HoldSlot", hold_slot_payload)
         if hold_slot_res['SlotHeldSuccessfully']:
-            body_text += f"Slot {slot['SlotId']}--{slot['BookingDateTime']} is successfully held.\n"
+            body_text += f"Slot {slot['SlotId']}--{slot['BookingDateTime']} is successfully held.\n\n"
             booking_payload = {
                 "CardNumber": "",
                 "Email": EMAIL,
@@ -109,18 +109,18 @@ def book_slots(available_slots):
                 site_address = booking_res['Booking']['SiteAddress']
                 date_time = booking_res['Booking']['BookingDateTime']
                 body_text += (f"Successfully booked at: {site_name}, {site_address}, {date_time}.\n"
-                              f"Confirmation number: {confirmation_number}\n")
+                              f"Confirmation number: {confirmation_number}\n\n")
                 client.request("/api/NewBooking", hold_slot_payload)
-                body_text += f"Slot {slot['SlotId']}--{slot['BookingDateTime']} is released.\n"
+                body_text += f"Slot {slot['SlotId']}--{slot['BookingDateTime']} is released.\n\n"
                 success = True
                 break
             else:
                 body_text += f"Slot {slot['SlotId']}--{slot['BookingDateTime']} is failed to book.\n"
-                body_text += f"Error message: {booking_res.get('ErrorMessage')}\n"
+                body_text += f"Error message: {booking_res.get('ErrorMessage')}\n\n"
             client.request("/api/NewBooking", hold_slot_payload)
-            body_text += f"Slot {slot['SlotId']}--{slot['BookingDateTime']} is released.\n"
+            body_text += f"Slot {slot['SlotId']}--{slot['BookingDateTime']} is released.\n\n"
         else:
-            body_text += f"Slot {slot['SlotId']}--{slot['BookingDateTime']} is failed to held.\n"
+            body_text += f"Slot {slot['SlotId']}--{slot['BookingDateTime']} is failed to held.\n\n"
     return {
         "body_text": body_text,
         "success": success
