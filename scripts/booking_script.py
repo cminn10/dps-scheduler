@@ -28,7 +28,14 @@ class DPSClient:
         elif res.status == 204:
             return None
         else:
-            raise Exception(f"Request failed with status code {res.status}")
+            try:
+                data = res.read().decode("utf-8")
+                txt = f"Request failed with status code {res.status}: {data}"
+                send_email(txt)
+                raise Exception(txt)
+            except Exception as e:
+                send_email(e)
+                raise e
 
 
 ########################
@@ -143,6 +150,7 @@ def send_email(body):
 
 def exec_booking():
     slots = get_available_slots()
+    print(slots)
     if len(slots) > 0:
         result = book_slots(slots)
         if SHOULD_SEND_EMAIL:
