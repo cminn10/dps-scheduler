@@ -45,12 +45,19 @@ end_time = datetime.strptime(PREF_TIME['endTime'], "%H:%M")
 client = DPSClient()
 
 
-def cancel_if_exists():
+def cancel_if_exists(booking_date_str):
     curr_status = client.request("/api/Booking", LOGIN_INFO)
     if curr_status and len(curr_status) > 0:
-        confirm_num = curr_status[0]['ConfirmationNumber']
-        cancel_payload = {**LOGIN_INFO, "ConfirmationNumber": confirm_num}
-        client.request("/api/CancelBooking", cancel_payload)
+        booking_date = datetime.strptime(booking_date_str, "%Y-%m-%dT%H:%M:%S")
+        curr_date = datetime.strptime(curr_status[0]['BookingDateTime'], "%Y-%m-%dT%H:%M:%S")
+        if booking_date < curr_date:
+            confirm_num = curr_status[0]['ConfirmationNumber']
+            cancel_payload = {**LOGIN_INFO, "ConfirmationNumber": confirm_num}
+            client.request("/api/CancelBooking", cancel_payload)
+            return True
+        else:
+            return False
+    return True
 
 
 def get_available_slots():
@@ -101,8 +108,11 @@ def book_slots(available_slots):
         body_text = ''
         hold_slot_res = client.request("/api/HoldSlot", hold_slot_payload)
         if hold_slot_res['SlotHeldSuccessfully']:
-            cancel_if_exists()
             body_text += f"Slot {slot['SlotId']}--{slot['BookingDateTime']} is successfully held.\n\n"
+            should_proceed = cancel_if_exists(slot['BookingDateTime'])
+            if not should_proceed:
+                body_text += 'Already booked an earlier slot. Skip.\n\n'
+                break
             booking_payload = {
                 "CardNumber": "",
                 "Email": EMAIL,
