@@ -30,11 +30,9 @@ class DPSClient:
         else:
             try:
                 data = res.read().decode("utf-8")
-                txt = f"Request failed with status code {res.status}: {data}"
-                send_email(txt)
+                txt = f"Request {path} failed with status code {res.status}: {data}"
                 raise Exception(txt)
             except Exception as e:
-                send_email(e)
                 raise e
 
 
@@ -47,6 +45,14 @@ end_time = datetime.strptime(PREF_TIME['endTime'], "%H:%M")
 client = DPSClient()
 
 
+def cancel_if_exists():
+    curr_status = client.request("/api/Booking", LOGIN_INFO)
+    if curr_status and len(curr_status) > 0:
+        confirm_num = curr_status[0]['ConfirmationNumber']
+        cancel_payload = {**LOGIN_INFO, "ConfirmationNumber": confirm_num}
+        client.request("/api/CancelBooking", cancel_payload)
+
+
 def get_available_slots():
     location_payload = {
         "TypeId": TYPE_ID,
@@ -54,6 +60,8 @@ def get_available_slots():
         "PreferredDay": 0
     }
     location_data = client.request("/api/AvailableLocation", location_payload)
+    if not location_data:
+        return []
     location_ids = []
     for i in location_data:
         curr_date = datetime.strptime(i['NextAvailableDate'], "%m/%d/%Y")
@@ -93,6 +101,7 @@ def book_slots(available_slots):
         body_text = ''
         hold_slot_res = client.request("/api/HoldSlot", hold_slot_payload)
         if hold_slot_res['SlotHeldSuccessfully']:
+            cancel_if_exists()
             body_text += f"Slot {slot['SlotId']}--{slot['BookingDateTime']} is successfully held.\n\n"
             booking_payload = {
                 "CardNumber": "",
@@ -149,14 +158,20 @@ def send_email(body):
 
 
 def exec_booking():
-    slots = get_available_slots()
-    print(slots)
-    if len(slots) > 0:
-        result = book_slots(slots)
+    try:
+        slots = get_available_slots()
+        print(slots)
+        if len(slots) > 0:
+            result = book_slots(slots)
+            if SHOULD_SEND_EMAIL:
+                send_email(result['body_text'])
+            return result['success']
+        else:
+            return False
+    except Exception as e:
         if SHOULD_SEND_EMAIL:
-            send_email(result['body_text'])
-        return result['success']
-    return False
+            send_email(str(e))
+        return False
 
 
 if __name__ == '__main__':
