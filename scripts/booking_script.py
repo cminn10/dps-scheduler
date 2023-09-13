@@ -45,19 +45,20 @@ end_time = datetime.strptime(PREF_TIME['endTime'], "%H:%M")
 client = DPSClient()
 
 
-def cancel_if_exists(booking_date_str):
+def should_reschedule(booking_date_str):
     curr_status = client.request("/api/Booking", LOGIN_INFO)
     if curr_status and len(curr_status) > 0:
         booking_date = datetime.strptime(booking_date_str, "%Y-%m-%dT%H:%M:%S")
         curr_date = datetime.strptime(curr_status[0]['BookingDateTime'], "%Y-%m-%dT%H:%M:%S")
-        if booking_date < curr_date:
-            confirm_num = curr_status[0]['ConfirmationNumber']
-            cancel_payload = {**LOGIN_INFO, "ConfirmationNumber": confirm_num}
-            client.request("/api/CancelBooking", cancel_payload)
-            return True
-        else:
-            return False
-    return True
+        return 1 if booking_date < curr_date else 0
+        # if booking_date < curr_date:
+        #     confirm_num = curr_status[0]['ConfirmationNumber']
+        #     cancel_payload = {**LOGIN_INFO, "ConfirmationNumber": confirm_num}
+        #     client.request("/api/CancelBooking", cancel_payload)
+        #     return True
+        # else:
+        #     return False
+    return -1
 
 
 def get_available_slots():
@@ -109,8 +110,8 @@ def book_slots(available_slots):
         hold_slot_res = client.request("/api/HoldSlot", hold_slot_payload)
         if hold_slot_res['SlotHeldSuccessfully']:
             body_text += f"Slot {slot['SlotId']}--{slot['BookingDateTime']} is successfully held.\n\n"
-            should_proceed = cancel_if_exists(slot['BookingDateTime'])
-            if not should_proceed:
+            should_proceed = should_reschedule(slot['BookingDateTime'])
+            if should_proceed == 0:
                 body_text += 'Already booked an earlier slot. Skip.\n\n'
                 break
             booking_payload = {
@@ -127,8 +128,9 @@ def book_slots(available_slots):
                 "AdaRequired": False,
                 "ResponseId": response_id,
             }
-            booking_payload = booking_payload | LOGIN_INFO
-            booking_res = client.request("/api/NewBooking", booking_payload)
+            booking_payload = {**booking_payload, **LOGIN_INFO}
+            request_path = "/api/NewBooking" if should_proceed == -1 else "/api/RescheduleBooking"
+            booking_res = client.request(request_path, booking_payload)
             if booking_res.get('Booking') is not None and booking_res.get('ErrorMessage') is None:
                 confirmation_number = booking_res['Booking']['ConfirmationNumber']
                 site_name = booking_res['Booking']['SiteName']
@@ -146,7 +148,7 @@ def book_slots(available_slots):
             client.request("/api/NewBooking", hold_slot_payload)
             body_text += f"Slot {slot['SlotId']}--{slot['BookingDateTime']} is released.\n\n"
         else:
-            body_text += f"Slot {slot['SlotId']}--{slot['BookingDateTime']} is failed to held.\n\n"
+            body_text += f"Slot {slot['SlotId']}--{slot['BookingDateTime']} is failed to held.\n{str(hold_slot_res)}\n\n"
     return {
         "body_text": body_text,
         "success": success
