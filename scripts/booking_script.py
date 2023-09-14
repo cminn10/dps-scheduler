@@ -119,7 +119,7 @@ def book_slots(available_slots):
                 "Email": EMAIL,
                 "CellPhone": "",
                 "HomePhone": "",
-                "ServiceTypeId": 81,
+                "ServiceTypeId": TYPE_ID,
                 "BookingDateTime": slot['BookingDateTime'],
                 "BookingDuration": 20,
                 "SpanishLanguage": "N",
