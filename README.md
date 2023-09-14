@@ -5,7 +5,7 @@ Make sure you have Python 3.6 or higher installed. Then, run the following comma
 Start the job:
 ```bash
 # Clone the repository
-# cd ./scripts
+cd ./scripts
 # update config.py with your information
 python3 main.py
 ```
@@ -35,8 +35,12 @@ If yes, you need to have a valid Gmail account with:
 
 `RUN_INTERVAL` - The interval between each run in seconds.
 
+### Cron job
+Texas DPS usually releases new appointments around 7:00 AM CST on weekdays. You can set up a daily cron job to run the script at 7:00 AM CST using crontab:
+`0 7 * * 1-5 cd /path/to/scripts && python3 main.py`
 
-### <a id='type-mapping'></a> TYPE_ID mapping
+
+## <a id='type-mapping'></a> TYPE_ID mapping
 | Type ID | Category                           | Appointment Type                                 |
 |---------|------------------------------------|--------------------------------------------------|
 | 21      | Road Skills Tests                  | Class C                                          |
